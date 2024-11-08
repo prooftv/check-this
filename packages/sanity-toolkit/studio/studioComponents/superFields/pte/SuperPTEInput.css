@@ -1,0 +1,5 @@
+.super-pte-container {
+  [data-testid='pt-editor'][data-fullscreen='false'] {
+    height: var(--pte-container-height, unset);
+  }
+}

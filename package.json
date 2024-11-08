@@ -1,0 +1,60 @@
+{
+  "name": "lucidity-next-sanity-starter",
+  "version": "0.0.1",
+  "private": true,
+  "keywords": [
+    "monorepo",
+    "nextjs",
+    "playwright",
+    "storybook",
+    "sanitycms",
+    "workspace",
+    "packages",
+    "enterprise"
+  ],
+  "description": "The Enterprise-Ready Next.js 14 + SanityCMS Starter Template",
+  "author": {
+    "name": "Jamie Warburton",
+    "url": "https://github.com/jamiewarb"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/hex-digital/lucidity-next-sanity-starter",
+  "repository": "hex-digital/lucidity-next-sanity-starter",
+  "scripts": {
+    "deps:check": "syncpack list-mismatches",
+    "deps:fix": "syncpack fix-mismatches",
+    "deps:format": "syncpack format",
+    "g:build": "turbo run lint --color",
+    "g:build-storybook": "turbo run build-storybook --color",
+    "g:dev": "turbo run dev --color",
+    "g:lint-staged-files": "lint-staged --allow-empty",
+    "g:lint": "TIMING=1 turbo run lint --color",
+    "g:lint:fix": "turbo run lint:fix --color",
+    "g:prettier": "turbo run prettier --color",
+    "g:prettier:fix": "turbo run prettier:fix --color",
+    "g:test": "turbo run test",
+    "g:test:unit": "turbo run test:unit",
+    "g:turbo": "turbo",
+    "g:typecheck": "turbo run typecheck",
+    "prepare": "husky"
+  },
+  "packageManager": "pnpm@9.4.0",
+  "engines": {
+    "node": ">=18.17.0",
+    "pnpm": ">=9.4.0"
+  },
+  "devDependencies": {
+    "@changesets/changelog-github": "^0.5.0",
+    "@changesets/cli": "^2.27.9",
+    "@commitlint/cli": "^19.5.0",
+    "@commitlint/config-conventional": "^19.5.0",
+    "@hexdigital/config-commitlint": "^1.0.1",
+    "@pkg/config": "workspace:*",
+    "husky": "^9.1.6",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "syncpack": "^13.0.0",
+    "turbo": "^2.2.3",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,0 +1,21 @@
+.char-count-text-input {
+  border: 1.5px solid #e1e8fa;
+  border-radius: 3px;
+  color: #6f7fb3;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 1px 3px;
+
+  @media (prefers-color-scheme: dark) {
+    border-color: #575f73;
+  }
+}
+
+.char-count-text-input--warning {
+  border-color: #fbf4ce;
+  color: #8b8775;
+
+  @media (prefers-color-scheme: dark) {
+    border-color: #575134;
+  }
+}

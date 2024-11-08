@@ -1,0 +1,122 @@
+name: CI Web App
+
+on:
+  push:
+    branches: [main]
+
+    # Only consider those paths to trigger the action
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - '*.lock'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'tsconfig.base.json'
+      - '.prettier*'
+      - '.github/**'
+      - 'turbo.json'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    # Only consider those paths to trigger the action
+    paths:
+      - 'apps/web/**'
+      - 'packages/**'
+      - 'package.json'
+      - '*.lock'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'tsconfig.base.json'
+      - '.prettier*'
+      - '.github/**'
+      - 'turbo.json'
+
+  # Allows triggering this workflow from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  lint-unit-build:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    # To use 'Remote' Caching, uncomment the next lines and follow the steps below.
+    # We are set up to caching using GitHub artifacts by default, but teams may wish to
+    # use Vercel's Remote Caching feature.
+    env:
+      TURBO_API: 'http://127.0.0.1:9080'
+      TURBO_TEAM: 'nextjs-monorepo-example'
+      TURBO_TOKEN: 'local_server_turbo_relaxed_token'
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      # Uses the pnpm version specified in root package.json `packageManager`
+      - name: Setup pnpm v9 🦾
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node v${{ matrix.node }} env 🏗
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: 'pnpm'
+
+      - name: ⏩ TurboRepo local server
+        uses: felixmosh/turborepo-gh-artifacts@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          server-token: ${{ env.TURBO_TOKEN }}
+
+      - name: Setup Next application 🥾
+        run: cp .github/apps.web.env apps/web/.env
+
+      - name: Restore Web App related caches ♻️
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/apps/web/.next/cache
+            ${{ github.workspace }}/.cache
+            ${{ github.workspace }}/**/tsconfig.tsbuildinfo
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-web-app-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-web-app-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      - name: Install root + src dependencies 👨🏻‍💻
+        run: pnpm install
+
+      - name: Run type checking 📚
+        run: pnpm g:typecheck
+
+      - name: Run linters 👀
+        run: pnpm g:lint
+        env:
+          TIMING: 1
+
+      - name: 🧪 Unit tests
+        run: pnpm g:test:unit
+
+      - name: 🏗 Build web-app
+        run: pnpm g:build
+        env:
+          NEXT_BUILD_ENV_ESLINT: false
+          NEXT_BUILD_ENV_TYPECHECK: false
+          NEXT_BUILD_ENV_SOURCEMAPS: false
+          NEXT_BUILD_ENV_SENTRY_ENABLED: true
+          NEXT_BUILD_ENV_SENTRY_UPLOAD_DRY_RUN: true
+          NEXT_TELEMETRY_DISABLED: true
+
+      #- name: 📐 Check browser bundle size limits
+      #  run: yarn --filter "apps/web" check-size
+
+      #- name: 🛟 Check ecmascript checks for build files
+      #  run: yarn --filter "apps/web" check-dist

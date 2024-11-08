@@ -1,0 +1,108 @@
+name: CI Packages
+
+on:
+  push:
+    branches: [main]
+
+    # Only consider those paths to trigger the action
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - '*.lock'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'tsconfig.base.json'
+      - '.prettier*'
+      - '.github/**'
+      - 'turbo.json'
+
+  pull_request:
+    types: [opened, synchronize, reopened]
+    # Only consider those paths to trigger the action
+    paths:
+      - 'packages/**'
+      - 'package.json'
+      - '*.lock'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'tsconfig.base.json'
+      - '.prettier*'
+      - '.github/**'
+      - 'turbo.json'
+
+  # Allows triggering this workflow from GitHub UI
+  workflow_dispatch:
+
+jobs:
+  lint-unit-build:
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    # To use 'Remote' Caching, uncomment the next lines and follow the steps below.
+    # We are set up to caching using GitHub artifacts by default, but teams may wish to
+    # use Vercel's Remote Caching feature.
+    env:
+      TURBO_API: 'http://127.0.0.1:9080'
+      TURBO_TEAM: 'nextjs-monorepo-example'
+      TURBO_TOKEN: 'local_server_turbo_relaxed_token'
+
+    steps:
+      - name: Checkout 🛎
+        uses: actions/checkout@v4
+
+      # Uses the pnpm version specified in root package.json `packageManager`
+      - name: Setup pnpm v9 🦾
+        uses: pnpm/action-setup@v4
+
+      - name: Setup node v${{ matrix.node }} env 🏗
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          check-latest: true
+          cache: 'pnpm'
+
+      - name: ⏩ TurboRepo local server
+        uses: felixmosh/turborepo-gh-artifacts@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          server-token: ${{ env.TURBO_TOKEN }}
+
+      - name: Restore packages related caches ♻️
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ github.workspace }}/.cache
+            ${{ github.workspace }}/**/tsconfig.tsbuildinfo
+          # Generate a new cache whenever packages or source files change.
+          key: ${{ runner.os }}-packages-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          # If source files changed but packages didn't, rebuild from a prior cache.
+          restore-keys: |
+            ${{ runner.os }}-packages-${{ hashFiles('**/pnpm-lock.yaml') }}-
+
+      - name: Install root + src dependencies 👨🏻‍💻
+        run: pnpm install
+
+      - name: Run type checking 📚
+        run: pnpm g:typecheck --filter="./packages/*"
+
+      - name: Run linters 👀
+        run: pnpm g:lint --filter="./packages/*"
+        env:
+          TIMING: 1
+
+      - name: 🧪 Unit tests
+        run: pnpm g:test:unit --filter="./packages/*"
+
+      - name: 🏗 Build web-app
+        run: pnpm g:build --filter="./packages/*"
+
+      - name: Build storybook 🧐
+        run: pnpm g:build-storybook --filter="./packages/*"
+        env:
+          STORYBOOK_DISABLE_TELEMETRY: 1
